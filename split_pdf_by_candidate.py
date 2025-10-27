@@ -276,30 +276,63 @@ def main():
     """Main entry point"""
     import sys
     import glob
+    import argparse
     
-    # Find PDF files starting with R007
-    pdf_files = glob.glob('R007*.pdf')
+    # Set up argument parser
+    parser = argparse.ArgumentParser(
+        description='Split a bundled PDF containing multiple candidates into '
+                    'individual PDFs organized by candidate name.'
+    )
+    parser.add_argument(
+        'pdf_file',
+        nargs='?',
+        help='Path to the PDF file to process. If not specified, looks for '
+             'files starting with "R007".'
+    )
+    parser.add_argument(
+        '-o', '--output',
+        default='candidates',
+        help='Output directory for candidate folders (default: candidates)'
+    )
+    parser.add_argument(
+        '-a', '--analyze',
+        action='store_true',
+        help='Analyze PDF structure without splitting'
+    )
     
-    if not pdf_files:
-        logger.error("No PDF files starting with 'R007' found in current "
-                    "directory")
-        sys.exit(1)
+    args = parser.parse_args()
     
-    if len(pdf_files) > 1:
-        logger.warning(f"Found {len(pdf_files)} PDF files. Using the first: "
-                      f"{pdf_files[0]}")
+    # Determine input PDF file
+    if args.pdf_file:
+        if not os.path.exists(args.pdf_file):
+            logger.error(f"PDF file not found: {args.pdf_file}")
+            sys.exit(1)
+        input_pdf = args.pdf_file
+    else:
+        # Find PDF files starting with R007
+        pdf_files = glob.glob('R007*.pdf')
+        
+        if not pdf_files:
+            logger.error("No PDF files starting with 'R007' found in current "
+                        "directory. Please specify a PDF file.")
+            sys.exit(1)
+        
+        if len(pdf_files) > 1:
+            logger.warning(f"Found {len(pdf_files)} PDF files. "
+                          f"Using the first: {pdf_files[0]}")
+        
+        input_pdf = pdf_files[0]
     
-    input_pdf = pdf_files[0]
     logger.info(f"Processing: {input_pdf}")
     
     # Create splitter instance
-    splitter = CandidatePDFSplitter(input_pdf)
+    splitter = CandidatePDFSplitter(input_pdf, args.output)
     
-    # Uncomment to analyze PDF structure first
-    # splitter.analyze_pdf_structure()
-    
-    # Split the PDF
-    splitter.split_pdf()
+    # Analyze or split
+    if args.analyze:
+        splitter.analyze_pdf_structure()
+    else:
+        splitter.split_pdf()
 
 
 if __name__ == "__main__":
